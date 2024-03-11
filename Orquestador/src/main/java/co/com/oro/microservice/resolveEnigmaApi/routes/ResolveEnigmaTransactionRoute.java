@@ -1,6 +1,7 @@
 package co.com.oro.microservice.resolveEnigmaApi.routes;
 
 import org.apache.camel.builder.RouteBuilder;
+import org.apache.camel.model.dataformat.JsonLibrary;
 import org.apache.camel.component.http4.HttpMethods;
 import org.springframework.stereotype.Component;
 
@@ -9,7 +10,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import org.apache.camel.Exchange;
 import org.apache.camel.Processor;
+
 import co.com.oro.microservice.resolveEnigmaApi.model.JsonApiBodyRequest;
+import co.com.oro.microservice.resolveEnigmaApi.model.JsonApiBodyResponseErrors;
 import co.com.oro.microservice.resolveEnigmaApi.model.JsonApiBodyResponseSuccess;
 
 import java.io.InputStream;
@@ -23,6 +26,8 @@ public class ResolveEnigmaTransactionRoute extends RouteBuilder{
 
 	@Override
 	public void configure() throws Exception {
+		
+		
 		from("direct:resolve-enigma")
 		.log("Request body ${body}")
 		.routeId("resolveEnigma")
@@ -92,7 +97,24 @@ public class ResolveEnigmaTransactionRoute extends RouteBuilder{
 	        }
 	    })
 		.to("freemarker:templates/ResolveEnigmaTransaction.ftl")
-		.log("Response ${body}");
+		.log("Response ${body}")
+		
+		.choice()
+    	.when(exchangeProperty("Error").isEqualTo("0000"))
+    	 	.to("direct:generate-response-success")
+        .otherwise()
+         	.to("direct:generate-response-error")            	
+         .end();
+		
+		
+		from("direct:generate-response-success")
+		.to("freemarker:templates/ResolveEnigmaTransaction.ftl")
+		.unmarshal().json(JsonLibrary.Jackson, JsonApiBodyResponseSuccess.class)
+		.to("seda:save-log?waitForTaskToComplete=never");
+		
+		from("direct:generate-response-error")
+		.to("freemarker:templates/ResolveEnigmaTransactionError.ftl")
+		.unmarshal().json(JsonLibrary.Jackson, JsonApiBodyResponseErrors.class);
 		
 	}
 	
@@ -107,14 +129,20 @@ public class ResolveEnigmaTransactionRoute extends RouteBuilder{
 
 	        if(firstElement.getData().get(0).getAnswer().equals(" Step 1- Abrir el refrigerador")) {
 	            exchange.setProperty("Step1", firstElement.getData().get(0).getAnswer());
+	            return;
 	        }
 	        if(firstElement.getData().get(0).getAnswer().equals(" Step 2- Meter la jirafa")) {
 	            exchange.setProperty("Step2", firstElement.getData().get(0).getAnswer());
+	            return;
 	        }
 	        if(firstElement.getData().get(0).getAnswer().equals(" Step 3- Cerrar la nevera")) {
 	            exchange.setProperty("Step3", firstElement.getData().get(0).getAnswer());
+	            return;
 	        }
+	 
 	    } else {
+	    	exchange.setProperty("Error", "1101");
+	    	exchange.setProperty("DescError", "Error caused in step");
 	        exchange.getIn().setBody(null); // or any default value if needed
 	    }
 	}

@@ -42,10 +42,10 @@ public class GetStepOneClientRoute extends RouteBuilder {
                       exchange.getIn().setBody(firstElement);
                       if(firstElement.getData().get(0).getAnswer().equals(" Step 2- Meter la jirafa")) {
                     	  exchange.setProperty("Step2", firstElement.getData().get(0).getAnswer());
-                    	  exchange.setProperty("error", "0000");
+                    	  exchange.setProperty("Error", "0000");
                     	  exchange.setProperty("DescError", "No error");
                       }else {
-                    	  exchange.setProperty("error", "0001");
+                    	  exchange.setProperty("Error", "0001");
                     	  exchange.setProperty("DescError", "Error consulting step one");
                       }
                   } else {
